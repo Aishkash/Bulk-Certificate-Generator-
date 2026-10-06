@@ -1,10 +1,13 @@
 import uvicorn
 from datetime import date
 
+from fastapi.responses import FileResponse
+from app.database import fetch_certificate, fetch_job, init_db, save_job
+
+
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import fetch_job, init_db, save_job
 from app.parsing import ParseError, read_names, validate_names
 from app.processor import process_job
 
@@ -69,6 +72,13 @@ def get_job(job_id: int):
         "status": job["status"],
         "certificates": certs,
     }
+@app.get("/certificates/{cert_id}/download")
+def download_certificate(cert_id: int):
+    cert = fetch_certificate(cert_id)
+    if not cert or cert["status"] != "SUCCESS":
+        raise HTTPException(status_code=404, detail="Certificate not available")
+    return FileResponse(cert["file_path"], media_type="application/pdf",
+                        filename=f"{cert['name']}.pdf")
 
 
 if __name__ == "__main__":

@@ -105,3 +105,10 @@ def update_certificate(cert_id, job_id, status, file_path=None, error=None):
             text(f"UPDATE jobs SET {column} = {column} + 1 WHERE id = :id"),
             {"id": job_id},
         )
+def fetch_certificate(cert_id):
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT id, name, status, file_path FROM certificates WHERE id = :id"),
+            {"id": cert_id},
+        ).mappings().first()
+    return dict(row) if row else None
