@@ -1,4 +1,8 @@
 fastapi
-pandas
 uvicorn[standard]
 python-multipart
+pandas
+sqlalchemy
+psycopg2-binary
+python-dotenv
+psycopg

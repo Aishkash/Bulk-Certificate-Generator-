@@ -1,27 +1,31 @@
 import uvicorn
-
 from datetime import date
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.database import fetch_job, init_db, save_job
 from app.parsing import ParseError, read_names, validate_names
+
+init_db()  # creates the tables on startup
 
 app = FastAPI(title="Bulk Certificate Generator")
 
 app.add_middleware(
-    CORSMiddleware,#crossorigin
+    CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 @app.get("/health")
-async def health_check():
+def health_check():
     return {"status": "healthy"}
 
+
 @app.post("/jobs", status_code=202)
-async def create_job(
+def create_job(
     title: str = Form(...),
     issued_by: str = Form(...),
     issue_date: date = Form(...),
@@ -33,18 +37,37 @@ async def create_job(
         raise HTTPException(status_code=400, detail=str(e))
 
     valid, rejected = validate_names(names)
+    job_id = save_job(title, issued_by, issue_date, valid, rejected)
+
+    return {
+        "job_id": job_id,
+        "summary": {"total": len(names), "valid": len(valid), "rejected": len(rejected)},
+        "valid": valid,
+        "rejected": rejected,
+    }
+
+
+@app.get("/jobs/{job_id}")
+def get_job(job_id: int):
+    result = fetch_job(job_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job, certs = result
+    generated = sum(1 for c in certs if c["status"] == "SUCCESS")
+    failed = sum(1 for c in certs if c["status"] == "FAILED")
 
     return {
         "summary": {
-            "total": len(names),
-            "valid": len(valid),
-            "rejected": len(rejected),
+            "total": job["total"],
+            "generated": generated,
+            "failed": failed,
+            "pending": job["total"] - generated - failed,
         },
-        "title": title,
-        "issued_by": issued_by,
-        "issue_date": issue_date,
-        "valid": valid,
-        "rejected": rejected,
+        "job_id": job["id"],
+        "title": job["title"],
+        "status": job["status"],
+        "certificates": certs,
     }
 
 
