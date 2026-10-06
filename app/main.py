@@ -1,13 +1,14 @@
 import uvicorn
 from datetime import date
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import fetch_job, init_db, save_job
 from app.parsing import ParseError, read_names, validate_names
+from app.processor import process_job
 
-init_db()  # creates the tables on startup
+init_db()
 
 app = FastAPI(title="Bulk Certificate Generator")
 
@@ -26,6 +27,7 @@ def health_check():
 
 @app.post("/jobs", status_code=202)
 def create_job(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     issued_by: str = Form(...),
     issue_date: date = Form(...),
@@ -37,16 +39,14 @@ def create_job(
         raise HTTPException(status_code=400, detail=str(e))
 
     valid, rejected = validate_names(names)
-    job_id = save_job(title, issued_by, issue_date, valid, rejected)
+    job_id = save_job(title, issued_by, issue_date, valid)
+    background_tasks.add_task(process_job, job_id)
 
     return {
         "job_id": job_id,
         "summary": {"total": len(names), "valid": len(valid), "rejected": len(rejected)},
-        "valid": valid,
-        "rejected": rejected,
+        "rejected": rejected,  # the UI shows these
     }
-
-
 @app.get("/jobs/{job_id}")
 def get_job(job_id: int):
     result = fetch_job(job_id)
