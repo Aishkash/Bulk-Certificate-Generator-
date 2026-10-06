@@ -1,3 +1,5 @@
+import uvicorn
+
 from datetime import date
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -14,6 +16,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.post("/jobs", status_code=202)
 async def create_job(
@@ -41,3 +46,7 @@ async def create_job(
         "valid": valid,
         "rejected": rejected,
     }
+
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)

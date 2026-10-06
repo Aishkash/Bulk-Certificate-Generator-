@@ -1,5 +1,3 @@
-import io
-
 import pandas as pd
 
 MAX_ROWS = 1000
@@ -9,16 +7,10 @@ class ParseError(Exception):
     """Raised when the whole file is unusable."""
 
 
-def read_names(filename: str, content: bytes) -> list[str]:
-    """Read the CSV and return the list of names from the 'name' column."""
-    if not content:
-        raise ParseError("Uploaded file is empty")
-    if not (filename or "").lower().endswith(".csv"):
-        raise ParseError("Upload a .csv file")
-
+def read_names(file) -> list[str]:
+    """Read the CSV and return the names from the 'name' column."""
     try:
-        df = pd.read_csv(io.BytesIO(content), dtype=str, keep_default_na=False,
-                         encoding="utf-8-sig")
+        df = pd.read_csv(file, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     except Exception:
         raise ParseError("Could not read the file. Make sure it is a valid CSV")
 
