@@ -1,1 +1,1 @@
-export const API = "https://bulk-certificate-generator-z488.onrender.com/";
+export const API = "https://bulk-certificate-generator-z488.onrender.com";
