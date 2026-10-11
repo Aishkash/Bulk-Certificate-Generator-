@@ -2,3 +2,4 @@ venv
 koppa.csv
 .env
 storage
+backend/app/__pycache__/
